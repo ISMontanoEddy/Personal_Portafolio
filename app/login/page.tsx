@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Shield, KeyRound, Loader2, ArrowRight, Lock } from "lucide-react";
+import { Shield, KeyRound, Loader2, ArrowRight, Lock, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +18,7 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -29,12 +27,20 @@ export default function LoginPage() {
       }
 
       if (data?.user) {
-        router.push("/dashboard");
-        router.refresh();
+        // Redirección completa para garantizar sincronización de cookies en Next.js
+        window.location.href = "/dashboard";
       }
     } catch (err: any) {
-      setError(err.message || "Error al autenticar. Verifica tus credenciales.");
-    } finally {
+      console.error("Login error:", err);
+      let message = err.message || "Error al autenticar. Verifica tus credenciales.";
+
+      if (message.includes("Invalid login credentials")) {
+        message = "Credenciales incorrectas. Verifica el correo y la contraseña en Supabase Auth.";
+      } else if (message.includes("Email not confirmed")) {
+        message = "El correo no está confirmado en Supabase. En Supabase Dashboard -> Authentication -> Users, marca el usuario como 'Confirmed' o crea uno nuevo con 'Auto Confirm'.";
+      }
+
+      setError(message);
       setLoading(false);
     }
   };
@@ -62,8 +68,8 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="mb-5 p-3 rounded-lg bg-red-950/40 border border-red-800/50 text-red-300 text-xs flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+            <div className="mb-5 p-3 rounded-lg bg-red-950/40 border border-red-800/50 text-red-300 text-xs flex items-start gap-2 leading-relaxed">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
